@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Фулбади А/Б — Трекер</title>
+
+  <!-- Мета-теги для запуска с главного экрана телефона как полноценного приложения -->
+  <meta name="theme-color" content="#0B0E14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Фулбади А/Б" />
+
+  <!-- Встроенная SVG-иконка для вкладки и ярлыка на главном экране -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%230B0E14'/%3E%3Crect x='6' y='6' width='116' height='116' rx='24' fill='none' stroke='%23A3E635' stroke-width='4'/%3E%3Cpath d='M26 64h76M36 44v40M92 44v40M22 52v24M106 52v24' stroke='%23A3E635' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230B0E14'/%3E%3Cpath d='M36 90h108M52 60v60M128 60v60M30 72v36M150 72v36' stroke='%23A3E635' stroke-width='14' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+  <!-- Шрифт Inter и Tailwind CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            amoled: '#0B0E14',
+            card: '#151A24',
+            cardHover: '#1C2331',
+            limeAccent: '#A3E635',
+            skyAccent: '#38BDF8',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Базовые настройки для плавного мобильного скролла и AMOLED-контраста */
+    html, body {
+      background-color: #0B0E14;
+      color: #F8FAFC;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+    /* Убираем стрелочки у числовых инпутов */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    /* Скрытие скроллбара для горизонтальных списков */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* Безопасные отступы для экранов с "чёлкой" и нижней полосой */
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+  </style>
+</head>
+<body class="bg-amoled text-slate-100 min-h-screen antialiased selection:bg-limeAccent selection:text-amoled">
+
+  <!-- Основной контейнер приложения (оптимизирован под ширину смартфона) -->
+  <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative">
+
+    <!-- ==================== ВЕРХНЯЯ ПАНЕЛЬ (STICKY) ==================== -->
+    <header class="sticky top-0 z-30 bg-amoled/95 backdrop-blur-md border-b border-slate-800/80 safe-top">
+      <div class="px-4 pt-3 pb-3">
+        <div class="flex items-center justify-between gap-2 mb-2.5">
+          <div>
+            <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-limeAccent shadow-[0_0_10px_#A3E635]"></span>
+              Фулбади А / Б
+            </h1>
+            <p id="header-subtitle" class="text-xs text-slate-400">Персональный трекер • 19 подходов</p>
+          </div>
+
+          <!-- Живой секундомер длительности тренировки -->
+          <button id="workout-clock-btn" onclick="toggleWorkoutClock()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-slate-800 active:scale-95 transition text-xs font-semibold text-skyAccent" title="Нажми, чтобы запустить/приостановить секундомер">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/>
+            </svg>
+            <span id="workout-clock-text" class="tabular-nums">00:00</span>
+          </button>
+        </div>
+
+        <!-- Переключатель дней и полоса прогресса (видны на вкладке «Тренировка») -->
+        <div id="workout-header-controls">
+          <div class="grid grid-cols-2 gap-2 mb-2.5">
+            <button id="btn-day-A" onclick="switchDay('A')" class="relative py-2.5 px-3 rounded-xl font-bold text-sm transition active:scale-[0.98] flex items-center justify-center gap-1.5 border">
+              <span>День А</span>
+              <span id="rec-badge-A" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-limeAccent/20 text-limeAccent">СЕГОДНЯ</span>
+            </button>
+            <button id="btn-day-B" onclick="switchDay('B')" class="relative py-2.5 px-3 rounded-xl font-bold text-sm transition active:scale-[0.98] flex items-center justify-center gap-1.5 border">
+              <span>День Б</span>
+              <span id="rec-badge-B" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-limeAccent/20 text-limeAccent">СЕГОДНЯ</span>
+            </button>
+          </div>
+
+          <!-- Прогресс подходов -->
+          <div class="flex items-center justify-between text-xs mb-1">
+            <span id="day-focus-text" class="text-slate-400 truncate pr-2">Горизонтальный жим, ширина спины, выпады, бицепс</span>
+            <span id="sets-counter-text" class="font-bold text-limeAccent tabular-nums shrink-0">0 / 19 подходов</span>
+          </div>
+          <div class="w-full h-2 bg-slate-800/90 rounded-full overflow-hidden">
+            <div id="sets-progress-bar" class="h-full bg-gradient-to-r from-skyAccent to-limeAccent rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== ОСНОВНОЙ КОНТЕНТ ВКЛАДОК ==================== -->
+    <main class="flex-1 px-3.5 pt-3 pb-44">
+
+      <!-- ВКЛАДКА 1: ТРЕНИРОВКА -->
+      <section id="tab-workout" class="space-y-3.5">
+        <div id="exercises-container" class="space-y-3.5"></div>
+
+        <!-- Кнопки завершения и сброса тренировки -->
+        <div class="pt-2 space-y-2.5">
+          <button onclick="openFinishModal()" class="w-full py-4 px-5 rounded-2xl bg-limeAccent text-amoled font-extrabold text-base shadow-[0_0_24px_rgba(163,230,53,0.25)] active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Завершить и сохранить тренировку
+          </button>
+
+          <button onclick="openResetModal()" class="w-full py-3 px-4 rounded-xl bg-card border border-slate-800 text-slate-400 text-xs font-semibold active:scale-[0.98] transition">
+            Очистить текущие галочки
+          </button>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 2: ПРОГРЕСС -->
+      <section id="tab-progress" class="hidden space-y-4">
+        <div class="bg-card border border-slate-800/80 rounded-2xl p-4">
+          <label for="progress-exercise-select" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Выбери упражнение</label>
+          <select id="progress-exercise-select" onchange="renderProgress()" class="w-full bg-amoled border border-slate-700 text-white rounded-xl px-3.5 py-3 text-sm font-semibold focus:outline-none focus:border-skyAccent">
+          </select>
+        </div>
+
+        <!-- Личные рекорды -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="bg-card border border-slate-800/80 rounded-2xl p-3 text-center">
+            <div class="text-[11px] text-slate-400 mb-1">Макс. вес</div>
+            <div id="pr-max-weight" class="text-lg font-extrabold text-limeAccent tabular-nums">—</div>
+          </div>
+          <div class="bg-card border border-slate-800/80 rounded-2xl p-3 text-center">
+            <div class="text-[11px] text-slate-400 mb-1">Лучший сет</div>
+            <div id="pr-best-set" class="text-sm font-extrabold text-skyAccent tabular-nums pt-0.5">—</div>
+          </div>
+          <div class="bg-card border border-slate-800/80 rounded-2xl p-3 text-center">
+            <div class="text-[11px] text-slate-400 mb-1">Макс. тоннаж</div>
+            <div id="pr-max-vol" class="text-base font-extrabold text-white tabular-nums pt-0.5">—</div>
+          </div>
+        </div>
+
+        <!-- Переключатель метрики графика и сам SVG-график -->
+        <div class="bg-card border border-slate-800/80 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-white">Динамика прогресса</h3>
+            <div class="inline-flex bg-amoled p-1 rounded-xl border border-slate-800">
+              <button id="metric-weight-btn" onclick="setChartMetric('weight')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition">Вес (кг)</button>
+              <button id="metric-volume-btn" onclick="setChartMetric('volume')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition">Объём</button>
+            </div>
+          </div>
+
+          <div id="progress-chart-container" class="w-full min-h-[210px] flex items-center justify-center">
+            <!-- SVG рендерится динамически -->
+          </div>
+        </div>
+
+        <!-- Последние записи по упражнению -->
+        <div class="bg-card border border-slate-800/80 rounded-2xl p-4">
+          <h3 class="text-sm font-bold text-white mb-3">Журнал по упражнению</h3>
+          <div id="progress-ex-logs" class="space-y-2 text-xs"></div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 3: ИСТОРИЯ -->
+      <section id="tab-history" class="hidden space-y-4">
+        <!-- Блок резервного копирования -->
+        <div class="bg-card border border-slate-800/80 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-bold text-white">Резервная копия данных</h3>
+            <span class="text-[11px] text-slate-400">Офлайн JSON</span>
+          </div>
+          <p class="text-xs text-slate-400 mb-3">Сохраняй бэкап раз в пару недель, чтобы не потерять историю при смене телефона или очистке браузера.</p>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="exportBackup()" class="py-2.5 px-3 rounded-xl bg-skyAccent/15 border border-skyAccent/40 text-skyAccent font-bold text-xs active:scale-95 transition flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Экспорт JSON
+            </button>
+            <label class="py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+              Импорт JSON
+              <input type="file" id="import-file-input" accept=".json,application/json" onchange="importBackup(event)" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Список завершённых тренировок -->
+        <div id="history-list" class="space-y-3"></div>
+      </section>
+
+    </main>
+
+    <!-- ==================== ПЛАВАЮЩИЙ ТАЙМЕР ОТДЫХА ==================== -->
+    <div id="rest-timer-bar" class="hidden fixed left-0 right-0 bottom-[74px] z-40 px-3 max-w-md mx-auto pointer-events-none">
+      <div class="pointer-events-auto bg-[#121826]/95 backdrop-blur-lg border border-skyAccent/40 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.7)] overflow-hidden">
+        <!-- Полоса прогресса таймера -->
+        <div class="w-full h-1 bg-slate-800">
+          <div id="rest-timer-progress" class="h-full bg-skyAccent transition-all duration-200" style="width: 100%"></div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="min-w-0">
+              <div id="rest-timer-label" class="text-[11px] font-semibold text-skyAccent truncate">Отдых после подхода</div>
+              <div id="rest-timer-display" class="text-2xl font-extrabold text-white tabular-nums leading-tight">02:00</div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button onclick="adjustRestTimer(-15)" class="px-2.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold active:scale-95 transition">-15с</button>
+              <button onclick="adjustRestTimer(15)" class="px-2.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold active:scale-95 transition">+15с</button>
+              <button id="rest-pause-btn" onclick="toggleRestPause()" class="px-3 py-2 rounded-xl bg-skyAccent/20 text-skyAccent text-xs font-bold active:scale-95 transition">Пауза</button>
+              <button onclick="stopRestTimer()" class="p-2 rounded-xl bg-rose-500/20 text-rose-400 active:scale-95 transition" aria-label="Закрыть таймер">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <!-- Быстрая кнопка 35с между ногами -->
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+            <span class="text-[11px] text-slate-400">Болгарские выпады:</span>
+            <button onclick="startRestTimer(35, 'Пауза между ногами (35с)')" class="px-3 py-1.5 rounded-lg bg-limeAccent/15 border border-limeAccent/40 text-limeAccent text-xs font-bold active:scale-95 transition">
+              ⏱ 35с (между ногами)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== НИЖНЯЯ НАВИГАЦИЯ (3 ВКЛАДКИ) ==================== -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 bg-amoled/95 backdrop-blur-lg border-t border-slate-800/90 safe-bottom">
+      <div class="max-w-md mx-auto grid grid-cols-3 h-[66px]">
+        <button id="nav-workout" onclick="switchTab('workout')" class="flex flex-col items-center justify-center gap-1 transition">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h2m14 0h2M6 7v6m12-6v6M8 10h8M6 17h12" />
+          </svg>
+          <span class="text-[11px] font-bold">Тренировка</span>
+        </button>
+        <button id="nav-progress" onclick="switchTab('progress')" class="flex flex-col items-center justify-center gap-1 transition">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M5 15l4-4 4 3 6-7" />
+          </svg>
+          <span class="text-[11px] font-bold">Прогресс</span>
+        </button>
+        <button id="nav-history" onclick="switchTab('history')" class="flex flex-col items-center justify-center gap-1 transition">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="text-[11px] font-bold">История</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ==================== УВЕДОМЛЕНИЯ (TOAST) ==================== -->
+    <div id="toast" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-card border border-limeAccent/50 text-white text-xs font-bold shadow-2xl max-w-[90vw] text-center"></div>
+
+    <!-- ==================== КАСТОМНОЕ МОДАЛЬНОЕ ОКНО ==================== -->
+    <div id="modal-overlay" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+      <div class="w-full max-w-sm bg-card border border-slate-700 rounded-3xl p-5 shadow-2xl space-y-4">
+        <h3 id="modal-title" class="text-lg font-extrabold text-white">Заголовок</h3>
+        <div id="modal-body" class="text-sm text-slate-300 space-y-2"></div>
+        <div id="modal-actions" class="grid grid-cols-2 gap-2.5 pt-2"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== ЛОГИКА ПРИЛОЖЕНИЯ ==================== -->
+  <script>
+    /* =========================================================================
+       1. ТОЧНАЯ ПЕРСОНАЛЬНАЯ ПРОГРАММА (ФУЛБАДИ А / ФУЛБАДИ Б — ПО 19 ПОДХОДОВ)
+       ========================================================================= */
+    const PROGRAM = {
+      A: {
+        title: 'День А',
+        focus: 'Горизонтальный жим, ширина спины, выпады, бицепс',
+        exercises: [
+          {
+            id: 'bench_press',
+            name: 'Жим лёжа (штанга / гантели)',
+            sets: 3,
+            repMin: 8,
+            repMax: 10,
+            repLabel: '8–10 повт.',
+            restSec: 150,
+            warmup: true,
+            tip: 'Лопатки сведены, стопы упёрты в пол, опускай подконтрольно к низу груди.'
+          },
+          {
+            id: 'lat_pulldown',
+            name: 'Тяга вертикального блока (широкий хват)',
+            sets: 3,
+            repMin: 8,
+            repMax: 12,
+            repLabel: '8–12 повт.',
+            restSec: 120,
+            warmup: true,
+            tip: 'Обезьяний хват (большой палец сверху), старт с опускания лопаток, тяни локти к задним карманам, негатив 2–3 сек.'
+          },
+          {
+            id: 'bulgarian_split',
+            name: 'Болгарские сплит-приседания (гантели)',
+            sets: 3,
+            repMin: 8,
+            repMax: 10,
+            repLabel: '8–10 (на ногу)',
+            restSec: 120,
+            legRestSec: 35,
+            warmup: true,
+            tip: 'Начинай со слабой ноги! Пауза 35–40 сек между ногами, 2 мин после обеих ног. Хват прокачивается под тяжёлые пакеты.'
+          },
+          {
+            id: 'db_row',
+            name: 'Тяга гантели одной рукой (обе ноги на полу)',
+            sets: 2,
+            repMin: 10,
+            repMax: 12,
+            repLabel: '10–12 (на руку)',
+            restSec: 90,
+            warmup: false,
+            tip: 'БЕЗ колена на лавке! Обе ноги на полу, таз и плечи параллельно полу (как со стаканом воды), пресс напряжён, тяни по дуге к карману штанов.'
+          },
+          {
+            id: 'leg_curl',
+            name: 'Сгибание ног в тренажёре',
+            sets: 2,
+            repMin: 10,
+            repMax: 12,
+            repLabel: '10–12 повт.',
+            restSec: 90,
+            warmup: false,
+            tip: 'Таз прижат к скамье, не отрывай бёдра, плавное опускание.'
+          },
+          {
+            id: 'lateral_raise',
+            name: 'Махи на средние дельты в тренажёре',
+            sets: 3,
+            repMin: 12,
+            repMax: 15,
+            repLabel: '12–15 повт.',
+            restSec: 75,
+            warmup: false,
+            tip: 'Без рывков корпусом, постоянное натяжение, веди локтями в стороны.'
+          },
+          {
+            id: 'hammer_curl',
+            name: 'Сгибания на бицепс «Молотки»',
+            sets: 3,
+            repMin: 8,
+            repMax: 12,
+            repLabel: '8–12 повт.',
+            restSec: 90,
+            warmup: false,
+            tip: 'Нейтральный хват (ладони внутрь), локти прижаты к корпусу, без раскачки спиной.'
+          }
+        ]
+      },
+      B: {
+        title: 'День Б',
+        focus: 'Верх груди, толщина спины, бицепс бедра, трицепс',
+        exercises: [
+          {
+            id: 'incline_db_press',
+            name: 'Жим гантелей на наклонной скамье (30°)',
+            sets: 3,
+            repMin: 8,
+            repMax: 12,
+            repLabel: '8–12 повт.',
+            restSec: 150,
+            warmup: true,
+            tip: 'Угол скамьи 30°, локти под 45° к корпусу, глубокое растяжение грудных внизу.'
+          },
+          {
+            id: 'db_row',
+            name: 'Тяга гантели одной рукой (обе ноги на полу)',
+            sets: 3,
+            repMin: 8,
+            repMax: 10,
+            repLabel: '8–10 (на руку)',
+            restSec: 120,
+            warmup: true,
+            tip: 'БЕЗ колена на лавке! Обе ноги на полу, таз ровно, пресс жёсткий, тяни по дуге к карману штанов.'
+          },
+          {
+            id: 'leg_curl',
+            name: 'Сгибание ног в тренажёре',
+            sets: 3,
+            repMin: 10,
+            repMax: 12,
+            repLabel: '10–12 повт.',
+            restSec: 120,
+            warmup: true,
+            tip: 'Максимальное сокращение в нижней точке, плавно отпускай вес вверх.'
+          },
+          {
+            id: 'lat_pulldown',
+            name: 'Тяга вертикального блока (широкий хват)',
+            sets: 2,
+            repMin: 10,
+            repMax: 12,
+            repLabel: '10–12 повт.',
+            restSec: 105,
+            warmup: false,
+            tip: 'Обезьяний хват, корпус отклонён на 10–15°, тяни к верху груди, негатив 2–3 сек.'
+          },
+          {
+            id: 'leg_extension',
+            name: 'Разгибание ног в тренажёре',
+            sets: 2,
+            repMin: 10,
+            repMax: 12,
+            repLabel: '10–12 повт.',
+            restSec: 90,
+            warmup: false,
+            tip: 'Пауза 1 сек в верхней точке, плавное опускание без удара плиток.'
+          },
+          {
+            id: 'lateral_raise',
+            name: 'Махи на средние дельты в тренажёре',
+            sets: 3,
+            repMin: 12,
+            repMax: 15,
+            repLabel: '12–15 повт.',
+            restSec: 75,
+            warmup: false,
+            tip: 'Постоянное натяжение в тренажёре, работай чисто средним пучком.'
+          },
+          {
+            id: 'overhead_tricep',
+            name: 'Трицепс через голову на блоке (кривая рукоять)',
+            sets: 3,
+            repMin: 8,
+            repMax: 12,
+            repLabel: '8–12 повт.',
+            restSec: 90,
+            warmup: false,
+            tip: 'Кривая рукоять (ориентир ~50 кг), локти фиксированы, максимальное растяжение за головой.'
+          }
+        ]
+      }
+    };
+
+    // Уникальный справочник всех упражнений для вкладки «Прогресс»
+    const ALL_EXERCISES = (() => {
+      const map = new Map();
+      [...PROGRAM.A.exercises, ...PROGRAM.B.exercises].forEach(ex => {
+        if (!map.has(ex.id)) map.set(ex.id, ex.name);
+      });
+      return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+    })();
+
+    const STORAGE_KEY = 'fullbody_ab_tracker_v1';
+
+    /* =========================================================================
+       2. СОСТОЯНИЕ ПРИЛОЖЕНИЯ И РАБОТА С LOCALSTORAGE
+       ========================================================================= */
+    let state = {
+      nextDay: 'A',
+      currentTab: 'workout',
+      chartMetric: 'weight', // 'weight' | 'volume'
+      selectedProgressEx: ALL_EXERCISES[0].id,
+      activeWorkout: null,
+      history: [] // Массив завершённых тренировок
+    };
+
+    // Локальные UI-состояния (не обязательно сохранять в JSON-бэкап)
+    let openTips = {};
+    let openWarmups = {};
+    let openHistoryCards = {};
+
+    // Секундомер тренировки (точный через Date.now)
+    let clockInterval = null;
+
+    // Плавающий таймер отдыха (точный через Date.now)
+    let restTimer = {
+      active: false,
+      paused: false,
+      totalSec: 90,
+      endTime: 0,
+      remainingMs: 0,
+      label: 'Отдых',
+      intervalId: null
+    };
+
+    // Web Audio API контекст для звукового сигнала
+    let audioCtx = null;
+
+    function unlockAudio() {
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) { /* игнорируем, если браузер блокирует звук */ }
+    }
+
+    function playFinishBeep() {
+      try {
+        unlockAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        // 3 чётких спортивных сигнала
+        [0, 0.22, 0.44].forEach((offset, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(idx === 2 ? 1046.5 : 880, now + offset);
+          gain.gain.setValueAtTime(0.25, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.18);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.19);
+        });
+      } catch (e) {}
+
+      try {
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 350]);
+        }
+      } catch (e) {}
+    }
+
+    /** Создаёт пустую структуру активной тренировки под выбранный день */
+    function createEmptyWorkout(day) {
+      const exercisesData = {};
+      PROGRAM[day].exercises.forEach(ex => {
+        const lastLog = getLastExerciseLog(ex.id, day);
+        const setsArr = [];
+        for (let i = 0; i < ex.sets; i++) {
+          // Автоподстановка веса с прошлой тренировки как удобного ориентира
+          const prevWeight = lastLog && lastLog.sets[i] && lastLog.sets[i].weight !== '' ? lastLog.sets[i].weight : (lastLog && lastLog.sets[0] ? lastLog.sets[0].weight : '');
+          setsArr.push({
+            weight: prevWeight !== undefined ? String(prevWeight) : '',
+            reps: '',
+            done: false
+          });
+        }
+        exercisesData[ex.id] = {
+          sets: setsArr,
+          warmupDone: [false, false]
+        };
+      });
+
+      return {
+        day,
+        startedAt: null,
+        accumulatedSec: 0,
+        running: false,
+        exercises: exercisesData
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state.nextDay = parsed.nextDay === 'B' ? 'B' : 'A';
+          state.history = Array.isArray(parsed.history) ? parsed.history : [];
+          if (parsed.activeWorkout && parsed.activeWorkout.day && PROGRAM[parsed.activeWorkout.day]) {
+            state.activeWorkout = parsed.activeWorkout;
+          }
+        }
+      } catch (e) {
+        console.error('Ошибка чтения localStorage:', e);
+      }
+
+      if (!state.activeWorkout) {
+        state.activeWorkout = createEmptyWorkout(state.nextDay);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          nextDay: state.nextDay,
+          activeWorkout: state.activeWorkout,
+          history: state.history
+        }));
+      } catch (e) {
+        showToast('Не удалось сохранить данные (переполнена память браузера)');
+      }
+    }
+
+    /* =========================================================================
+       3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (ИСТОРИЯ, ПРОГРЕССИЯ, РАЗМИНКА, ФОРМАТ)
+       ========================================================================= */
+    function parseNum(val) {
+      if (val === null || val === undefined || val === '') return 0;
+      const num = parseFloat(String(val).replace(',', '.'));
+      return isNaN(num) || num < 0 ? 0 : num;
+    }
+
+    /** Округление разминочного веса до ближайших 2.5 кг */
+    function roundTo2_5(val) {
+      if (!val || val <= 0) return 0;
+      return Math.max(2.5, Math.round(val / 2.5) * 2.5);
+    }
+
+    /** Ищет последний лог упражнения (сначала в том же дне, если нет — в любом) */
+    function getLastExerciseLog(exId, preferDay = null) {
+      if (preferDay) {
+        for (const w of state.history) {
+          if (w.day === preferDay) {
+            const found = (w.exercises || []).find(e => e.id === exId && e.sets.some(s => s.done));
+            if (found) return { ...found, date: w.date, day: w.day };
+          }
+        }
+      }
+      for (const w of state.history) {
+        const found = (w.exercises || []).find(e => e.id === exId && e.sets.some(s => s.done));
+        if (found) return { ...found, date: w.date, day: w.day };
+      }
+      return null;
+    }
+
+    /** Проверяет, закрыл ли пользователь верхнюю границу повторений во ВСЕХ подходах прошлой тренировки */
+    function shouldIncreaseWeight(ex, day) {
+      const last = getLastExerciseLog(ex.id, day);
+      if (!last || !last.sets || last.sets.length === 0) return false;
+      const targetMax = last.targetMax || ex.repMax;
+      // Все рабочие подходы должны быть выполнены и повторений >= верхней границы
+      const allCompleted = last.sets.every(s => s.done && parseNum(s.reps) >= targetMax && parseNum(s.weight) > 0);
+      return allCompleted;
+    }
+
+    function formatTimeMMSS(totalSeconds) {
+      const s = Math.max(0, Math.floor(totalSeconds));
+      const mins = Math.floor(s / 60);
+      const secs = s % 60;
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function formatDateRu(isoString) {
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch (e) {
+        return isoString;
+      }
+    }
+
+    function formatShortDate(isoString) {
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(el._hideTimer);
+      el._hideTimer = setTimeout(() => el.classList.add('hidden'), 2600);
+    }
+
+    /* =========================================================================
+       4. СЕКУНДОМЕР ДЛИТЕЛЬНОСТИ ТРЕНИРОВКИ
+       ========================================================================= */
+    function getWorkoutElapsedSec() {
+      const w = state.activeWorkout;
+      if (!w) return 0;
+      let sec = w.accumulatedSec || 0;
+      if (w.running && w.startedAt) {
+        sec += Math.floor((Date.now() - w.startedAt) / 1000);
+      }
+      return sec;
+    }
+
+    function startWorkoutClockIfNeeded() {
+      const w = state.activeWorkout;
+      if (!w.running) {
+        w.startedAt = Date.now();
+        w.running = true;
+        saveState();
+      }
+      updateWorkoutClockUI();
+    }
+
+    function toggleWorkoutClock() {
+      unlockAudio();
+      const w = state.activeWorkout;
+      if (w.running) {
+        w.accumulatedSec = getWorkoutElapsedSec();
+        w.startedAt = null;
+        w.running = false;
+        showToast('Секундомер на паузе');
+      } else {
+        w.startedAt = Date.now();
+        w.running = true;
+        showToast('Секундомер запущен');
+      }
+      saveState();
+      updateWorkoutClockUI();
+    }
+
+    function updateWorkoutClockUI() {
+      const el = document.getElementById('workout-clock-text');
+      const btn = document.getElementById('workout-clock-btn');
+      if (!el) return;
+      el.textContent = formatTimeMMSS(getWorkoutElapsedSec());
+      if (state.activeWorkout && state.activeWorkout.running) {
+        btn.classList.add('border-skyAccent/60', 'bg-skyAccent/10');
+        btn.classList.remove('border-slate-800', 'bg-card');
+      } else {
+        btn.classList.remove('border-skyAccent/60', 'bg-skyAccent/10');
+        btn.classList.add('border-slate-800', 'bg-card');
+      }
+    }
+
+    /* =========================================================================
+       5. УМНЫЙ ПЛАВАЮЩИЙ ТАЙМЕР ОТДЫХА (ТОЧНЫЙ ЧЕРЕЗ DATE.NOW)
+       ========================================================================= */
+    function startRestTimer(seconds, label = 'Отдых после подхода') {
+      unlockAudio();
+      clearInterval(restTimer.intervalId);
+      restTimer.active = true;
+      restTimer.paused = false;
+      restTimer.totalSec = seconds;
+      restTimer.remainingMs = seconds * 1000;
+      restTimer.endTime = Date.now() + restTimer.remainingMs;
+      restTimer.label = label;
+
+      document.getElementById('rest-timer-bar').classList.remove('hidden');
+      document.getElementById('rest-timer-label').textContent = label;
+      document.getElementById('rest-pause-btn').textContent = 'Пауза';
+
+      tickRestTimer();
+      restTimer.intervalId = setInterval(tickRestTimer, 200);
+    }
+
+    function tickRestTimer() {
+      if (!restTimer.active || restTimer.paused) return;
+      const leftMs = restTimer.endTime - Date.now();
+      if (leftMs <= 0) {
+        restTimer.remainingMs = 0;
+        clearInterval(restTimer.intervalId);
+        document.getElementById('rest-timer-display').textContent = '00:00';
+        document.getElementById('rest-timer-progress').style.width = '0%';
+        document.getElementById('rest-timer-label').textContent = '🔥 Отдых завершён — к снаряду!';
+        playFinishBeep();
+        showToast('⏰ Отдых окончен! Пора делать подход');
+        setTimeout(() => {
+          if (restTimer.remainingMs === 0 && restTimer.active) {
+            stopRestTimer();
+          }
+        }, 5000);
+        return;
+      }
+
+      restTimer.remainingMs = leftMs;
+      const leftSec = Math.ceil(leftMs / 1000);
+      document.getElementById('rest-timer-display').textContent = formatTimeMMSS(leftSec);
+      const pct = Math.min(100, Math.max(0, (leftMs / (restTimer.totalSec * 1000)) * 100));
+      document.getElementById('rest-timer-progress').style.width = `${pct}%`;
+    }
+
+    function adjustRestTimer(deltaSec) {
+      unlockAudio();
+      if (!restTimer.active) return;
+      if (restTimer.paused) {
+        restTimer.remainingMs = Math.max(5000, restTimer.remainingMs + deltaSec * 1000);
+        restTimer.totalSec = Math.max(restTimer.totalSec, Math.ceil(restTimer.remainingMs / 1000));
+        document.getElementById('rest-timer-display').textContent = formatTimeMMSS(Math.ceil(restTimer.remainingMs / 1000));
+      } else {
+        restTimer.endTime = Math.max(Date.now() + 3000, restTimer.endTime + deltaSec * 1000);
+        const newLeftSec = Math.ceil((restTimer.endTime - Date.now()) / 1000);
+        if (newLeftSec > restTimer.totalSec) restTimer.totalSec = newLeftSec;
+        tickRestTimer();
+      }
+    }
+
+    function toggleRestPause() {
+      unlockAudio();
+      if (!restTimer.active) return;
+      const btn = document.getElementById('rest-pause-btn');
+      if (restTimer.paused) {
+        restTimer.paused = false;
+        restTimer.endTime = Date.now() + restTimer.remainingMs;
+        btn.textContent = 'Пауза';
+        restTimer.intervalId = setInterval(tickRestTimer, 200);
+      } else {
+        restTimer.paused = true;
+        clearInterval(restTimer.intervalId);
+        restTimer.remainingMs = Math.max(0, restTimer.endTime - Date.now());
+        btn.textContent = 'Старт';
+      }
+    }
+
+    function stopRestTimer() {
+      clearInterval(restTimer.intervalId);
+      restTimer.active = false;
+      restTimer.paused = false;
+      document.getElementById('rest-timer-bar').classList.add('hidden');
+    }
+
+    /* =========================================================================
+       6. РЕНДЕР ВКЛАДКИ «ТРЕНИРОВКА»
+       ========================================================================= */
+    function switchDay(day) {
+      if (state.activeWorkout.day === day) return;
+      const anyDone = countCompletedSets() > 0;
+      if (anyDone) {
+        openModal(
+          `Переключить на День ${day}?`,
+          `<p>В текущем дне уже отмечено <b class="text-limeAccent">${countCompletedSets()}</b> подходов. При переключении текущие галочки сбросятся.</p>`,
+          [
+            { text: 'Отмена', style: 'secondary', onClick: closeModal },
+            {
+              text: `Перейти на День ${day}`,
+              style: 'primary',
+              onClick: () => {
+                state.activeWorkout = createEmptyWorkout(day);
+                saveState();
+                closeModal();
+                renderWorkout();
+              }
+            }
+          ]
+        );
+      } else {
+        state.activeWorkout = createEmptyWorkout(day);
+        saveState();
+        renderWorkout();
+      }
+    }
+
+    function countCompletedSets() {
+      const w = state.activeWorkout;
+      if (!w) return 0;
+      let count = 0;
+      PROGRAM[w.day].exercises.forEach(ex => {
+        const exData = w.exercises[ex.id];
+        if (exData) {
+          exData.sets.forEach(s => { if (s.done) count++; });
+        }
+      });
+      return count;
+    }
+
+    function updateProgressBar() {
+      const done = countCompletedSets();
+      const total = 19;
+      const pct = Math.round((done / total) * 100);
+      document.getElementById('sets-counter-text').textContent = `${done} / ${total} подходов`;
+      document.getElementById('sets-progress-bar').style.width = `${pct}%`;
+    }
+
+    function renderWorkout() {
+      const day = state.activeWorkout.day;
+      const plan = PROGRAM[day];
+
+      // Обновляем кнопки выбора дня
+      ['A', 'B'].forEach(d => {
+        const btn = document.getElementById(`btn-day-${d}`);
+        const badge = document.getElementById(`rec-badge-${d}`);
+        if (d === day) {
+          btn.className = 'relative py-2.5 px-3 rounded-xl font-bold text-sm transition active:scale-[0.98] flex items-center justify-center gap-1.5 border bg-limeAccent/15 border-limeAccent text-white shadow-[0_0_15px_rgba(163,230,53,0.12)]';
+        } else {
+          btn.className = 'relative py-2.5 px-3 rounded-xl font-bold text-sm transition active:scale-[0.98] flex items-center justify-center gap-1.5 border bg-card border-slate-800 text-slate-400';
+        }
+        if (state.nextDay === d) {
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      });
+
+      document.getElementById('day-focus-text').textContent = plan.focus;
+      updateProgressBar();
+      updateWorkoutClockUI();
+
+      const container = document.getElementById('exercises-container');
+      container.innerHTML = '';
+
+      plan.exercises.forEach((ex, exIdx) => {
+        const exData = state.activeWorkout.exercises[ex.id];
+        const lastLog = getLastExerciseLog(ex.id, day);
+        const readyToProgress = shouldIncreaseWeight(ex, day);
+        const allSetsDone = exData.sets.every(s => s.done);
+
+        // Формируем текст прошлого результата
+        let prevText = 'Первая запись';
+        if (lastLog && lastLog.sets) {
+          const doneSets = lastLog.sets.filter(s => s.done);
+          if (doneSets.length > 0) {
+            const firstW = doneSets[0].weight || 0;
+            const sameWeight = doneSets.every(s => s.weight == firstW);
+            if (sameWeight) {
+              prevText = `Прошлое: ${firstW} кг × ${doneSets.map(s => s.reps || 0).join(', ')}`;
+            } else {
+              prevText = 'Прошлое: ' + doneSets.map(s => `${s.weight}×${s.reps}`).join(' | ');
+            }
+          }
+        }
+
+        // Расчёт разминки по весу 1-го подхода (или прошлой тренировки)
+        const baseWeight = parseNum(exData.sets[0].weight) || (lastLog && lastLog.sets[0] ? parseNum(lastLog.sets[0].weight) : 0);
+        const w50 = roundTo2_5(baseWeight * 0.5);
+        const w75 = roundTo2_5(baseWeight * 0.75);
+
+        const card = document.createElement('div');
+        card.className = `bg-card rounded-2xl border transition-colors overflow-hidden ${allSetsDone ? 'border-limeAccent/50 shadow-[0_0_20px_rgba(163,230,53,0.07)]' : 'border-slate-800/90'}`;
+
+        card.innerHTML = `
+          <!-- Шапка карточки упражнения -->
+          <div class="p-3.5 pb-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-start gap-2.5 min-w-0">
+                <span class="w-6 h-6 rounded-lg shrink-0 mt-0.5 flex items-center justify-center text-xs font-extrabold ${allSetsDone ? 'bg-limeAccent text-amoled' : 'bg-slate-800 text-skyAccent'}">
+                  ${allSetsDone ? '✓' : exIdx + 1}
+                </span>
+                <div class="min-w-0">
+                  <h2 class="text-[15px] font-bold text-white leading-snug">${ex.name}</h2>
+                  <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1 text-xs text-slate-400">
+                    <span class="font-semibold text-skyAccent">${ex.sets} × ${ex.repLabel}</span>
+                    <span>•</span>
+                    <span>Отдых ${formatTimeMMSS(ex.restSec)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Кнопка шпаргалки техники «?» -->
+              <button onclick="toggleTip('${ex.id}')" class="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border transition active:scale-95 ${openTips[ex.id] ? 'bg-skyAccent/20 border-skyAccent text-skyAccent' : 'bg-amoled border-slate-800 text-slate-400'}" aria-label="Шпаргалка техники">
+                <span class="font-extrabold text-sm">?</span>
+              </button>
+            </div>
+
+            <!-- Бейдж двойной прогрессии -->
+            ${readyToProgress ? `
+              <div class="mt-2.5 px-3 py-2 rounded-xl bg-limeAccent/15 border border-limeAccent/40 text-limeAccent text-xs font-bold flex items-center gap-1.5">
+                <span>🔥</span>
+                <span>Пора добавить вес! (+2.5 кг / +1 плитка)</span>
+              </div>
+            ` : ''}
+
+            <!-- Сворачиваемая шпаргалка техники -->
+            ${openTips[ex.id] ? `
+              <div class="mt-2.5 p-3 rounded-xl bg-skyAccent/10 border border-skyAccent/30 text-xs text-slate-200 leading-relaxed">
+                <span class="font-bold text-skyAccent">Техника: </span>${ex.tip}
+              </div>
+            ` : ''}
+
+            <!-- Строка прошлого результата + быстрые действия -->
+            <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+              <span class="text-slate-400 font-medium">${prevText}</span>
+              <div class="flex items-center gap-1.5">
+                ${ex.warmup ? `
+                  <button onclick="toggleWarmup('${ex.id}')" class="px-2.5 py-1 rounded-lg font-bold border transition active:scale-95 ${openWarmups[ex.id] ? 'bg-amber-500/20 border-amber-400/50 text-amber-300' : 'bg-amoled border-slate-800 text-amber-400/90'}">
+                    Разминка
+                  </button>
+                ` : ''}
+                <button onclick="copyFirstWeight('${ex.id}')" class="px-2.5 py-1 rounded-lg bg-amoled border border-slate-800 text-slate-300 font-semibold active:scale-95 transition" title="Скопировать вес из 1-го подхода во все остальные">
+                  Вес 1→все
+                </button>
+              </div>
+            </div>
+
+            <!-- Блок авто-калькулятора разминки (для первых 3 упражнений) -->
+            ${ex.warmup && openWarmups[ex.id] ? `
+              <div class="mt-2.5 p-3 rounded-xl bg-amoled border border-amber-500/30 space-y-2">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold text-amber-400">Разминочные подходы (не идут в счёт 19)</span>
+                  <span class="text-slate-500">${baseWeight > 0 ? `от ${baseWeight} кг` : 'введи вес'}</span>
+                </div>
+                ${baseWeight > 0 ? `
+                  <div class="grid grid-cols-2 gap-2">
+                    <button onclick="toggleWarmupCheck('${ex.id}', 0)" class="py-2 px-2.5 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition active:scale-95 ${exData.warmupDone[0] ? 'bg-amber-500/20 border-amber-400 text-amber-200' : 'bg-card border-slate-800 text-slate-300'}">
+                      <span>50%: <b>${w50} кг</b> × 8</span>
+                      <span>${exData.warmupDone[0] ? '✓' : '○'}</span>
+                    </button>
+                    <button onclick="toggleWarmupCheck('${ex.id}', 1)" class="py-2 px-2.5 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition active:scale-95 ${exData.warmupDone[1] ? 'bg-amber-500/20 border-amber-400 text-amber-200' : 'bg-card border-slate-800 text-slate-300'}">
+                      <span>75%: <b>${w75} кг</b> × 6</span>
+                      <span>${exData.warmupDone[1] ? '✓' : '○'}</span>
+                    </button>
+                  </div>
+                ` : `
+                  <p class="text-xs text-slate-400">Введи рабочий вес в 1-м подходе, и я рассчитаю 50% и 75% (с округлением до 2.5 кг).</p>
+                `}
+              </div>
+            ` : ''}
+
+            <!-- Спец-кнопка 35 сек между ногами для болгарских выпадов -->
+            ${ex.legRestSec ? `
+              <button onclick="startRestTimer(${ex.legRestSec}, 'Болгарские: пауза между ногами (35с)')" class="mt-2.5 w-full py-2.5 px-3 rounded-xl bg-skyAccent/15 border border-skyAccent/40 text-skyAccent text-xs font-bold active:scale-[0.98] transition flex items-center justify-center gap-1.5">
+                <span>⏱</span>
+                <span>Запустить таймер 35с (между левой и правой ногой)</span>
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Таблица рабочих подходов -->
+          <div class="px-3.5 pb-3.5 pt-1 space-y-2">
+            <div class="grid grid-cols-[28px_1fr_1fr_78px] gap-2 text-[11px] font-semibold text-slate-500 px-1">
+              <div class="text-center">#</div>
+              <div>Вес (кг)</div>
+              <div>Повт.</div>
+              <div class="text-center">Готово</div>
+            </div>
+
+            ${exData.sets.map((s, sIdx) => `
+              <div class="grid grid-cols-[28px_1fr_1fr_78px] gap-2 items-center p-1 rounded-xl transition ${s.done ? 'bg-limeAccent/10' : ''}">
+                <div class="text-center text-xs font-bold ${s.done ? 'text-limeAccent' : 'text-slate-400'}">${sIdx + 1}</div>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="кг"
+                  value="${s.weight}"
+                  onchange="updateSetInput('${ex.id}', ${sIdx}, 'weight', this.value)"
+                  oninput="updateSetInputSilent('${ex.id}', ${sIdx}, 'weight', this.value)"
+                  class="w-full h-11 px-3 rounded-xl bg-amoled border text-center text-sm font-bold text-white tabular-nums focus:outline-none focus:border-skyAccent ${s.done ? 'border-limeAccent/40' : 'border-slate-800'}"
+                />
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="${ex.repMin}–${ex.repMax}"
+                  value="${s.reps}"
+                  onchange="updateSetInput('${ex.id}', ${sIdx}, 'reps', this.value)"
+                  oninput="updateSetInputSilent('${ex.id}', ${sIdx}, 'reps', this.value)"
+                  class="w-full h-11 px-3 rounded-xl bg-amoled border text-center text-sm font-bold text-white tabular-nums focus:outline-none focus:border-skyAccent ${s.done ? 'border-limeAccent/40' : 'border-slate-800'}"
+                />
+                <button
+                  onclick="toggleSetDone('${ex.id}', ${sIdx})"
+                  class="h-11 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1 transition active:scale-95 ${s.done ? 'bg-limeAccent text-amoled shadow-[0_0_12px_rgba(163,230,53,0.35)]' : 'bg-slate-800 text-slate-300 border border-slate-700'}"
+                >
+                  ${s.done ? '✓ ДА' : 'Готово'}
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function toggleTip(exId) {
+      openTips[exId] = !openTips[exId];
+      renderWorkout();
+    }
+
+    function toggleWarmup(exId) {
+      openWarmups[exId] = !openWarmups[exId];
+      renderWorkout();
+    }
+
+    function toggleWarmupCheck(exId, idx) {
+      const arr = state.activeWorkout.exercises[exId].warmupDone;
+      arr[idx] = !arr[idx];
+      saveState();
+      renderWorkout();
+    }
+
+    function updateSetInputSilent(exId, setIdx, field, val) {
+      const cleaned = val.replace(',', '.').replace(/[^0-9.]/g, '');
+      state.activeWorkout.exercises[exId].sets[setIdx][field] = cleaned;
+      saveState();
+    }
+
+    function updateSetInput(exId, setIdx, field, val) {
+      updateSetInputSilent(exId, setIdx, field, val);
+      // Если обновили вес в 1-м подходе и открыта разминка — пересчитаем
+      if (field === 'weight' && setIdx === 0 && openWarmups[exId]) {
+        renderWorkout();
+      }
+    }
+
+    function copyFirstWeight(exId) {
+      const sets = state.activeWorkout.exercises[exId].sets;
+      const firstW = sets[0].weight;
+      if (!firstW) {
+        showToast('Сначала введи вес в 1-м подходе');
+        return;
+      }
+      for (let i = 1; i < sets.length; i++) {
+        sets[i].weight = firstW;
+      }
+      saveState();
+      renderWorkout();
+      showToast(`Вес ${firstW} кг скопирован на все подходы`);
+    }
+
+    function toggleSetDone(exId, setIdx) {
+      unlockAudio();
+      const day = state.activeWorkout.day;
+      const ex = PROGRAM[day].exercises.find(e => e.id === exId);
+      const setObj = state.activeWorkout.exercises[exId].sets[setIdx];
+
+      setObj.done = !setObj.done;
+
+      if (setObj.done) {
+        // Если повторения не введены — автоматически подставим минимальную цель для удобства
+        if (!setObj.reps) {
+          setObj.reps = String(ex.repMin);
+        }
+        startWorkoutClockIfNeeded();
+        startRestTimer(ex.restSec, `Отдых: ${ex.name}`);
+      }
+
+      saveState();
+      renderWorkout();
+    }
+
+    /* =========================================================================
+       7. ЗАВЕРШЕНИЕ И СОХРАНЕНИЕ ТРЕНИРОВКИ
+       ========================================================================= */
+    function calcCurrentWorkoutStats() {
+      const w = state.activeWorkout;
+      const plan = PROGRAM[w.day];
+      let completedSets = 0;
+      let tonnage = 0;
+
+      plan.exercises.forEach(ex => {
+        const sets = w.exercises[ex.id].sets;
+        sets.forEach(s => {
+          if (s.done) {
+            completedSets++;
+            tonnage += parseNum(s.weight) * parseNum(s.reps);
+          }
+        });
+      });
+
+      return {
+        completedSets,
+        totalSets: 19,
+        tonnage: Math.round(tonnage),
+        durationSec: getWorkoutElapsedSec()
+      };
+    }
+
+    function openFinishModal() {
+      const stats = calcCurrentWorkoutStats();
+      if (stats.completedSets === 0) {
+        showToast('Отметь хотя бы один выполненный подход');
+        return;
+      }
+
+      const nextD = state.activeWorkout.day === 'A' ? 'Б' : 'А';
+      openModal(
+        `Завершить День ${state.activeWorkout.day}?`,
+        `
+          <div class="grid grid-cols-3 gap-2 text-center my-2">
+            <div class="bg-amoled rounded-xl p-2.5 border border-slate-800">
+              <div class="text-[10px] text-slate-400">Подходы</div>
+              <div class="text-base font-extrabold text-limeAccent">${stats.completedSets}/19</div>
+            </div>
+            <div class="bg-amoled rounded-xl p-2.5 border border-slate-800">
+              <div class="text-[10px] text-slate-400">Тоннаж</div>
+              <div class="text-base font-extrabold text-skyAccent">${stats.tonnage} кг</div>
+            </div>
+            <div class="bg-amoled rounded-xl p-2.5 border border-slate-800">
+              <div class="text-[10px] text-slate-400">Время</div>
+              <div class="text-base font-extrabold text-white">${formatTimeMMSS(stats.durationSec)}</div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400">Тренировка сохранится в историю, а следующей по очереди станет <b>День ${nextD}</b>.</p>
+        `,
+        [
+          { text: 'Ещё занимаюсь', style: 'secondary', onClick: closeModal },
+          { text: 'Сохранить', style: 'primary', onClick: saveCompletedWorkout }
+        ]
+      );
+    }
+
+    function saveCompletedWorkout() {
+      const w = state.activeWorkout;
+      const plan = PROGRAM[w.day];
+      const stats = calcCurrentWorkoutStats();
+
+      const record = {
+        id: 'w_' + Date.now(),
+        date: new Date().toISOString(),
+        day: w.day,
+        durationSec: stats.durationSec,
+        totalTonnage: stats.tonnage,
+        completedSets: stats.completedSets,
+        totalSets: 19,
+        exercises: plan.exercises.map(ex => ({
+          id: ex.id,
+          name: ex.name,
+          targetMax: ex.repMax,
+          sets: w.exercises[ex.id].sets.map(s => ({
+            weight: parseNum(s.weight),
+            reps: parseNum(s.reps),
+            done: !!s.done
+          }))
+        }))
+      };
+
+      // Добавляем в начало истории
+      state.history.unshift(record);
+      // Авто-чередование А ↔ Б
+      state.nextDay = w.day === 'A' ? 'B' : 'A';
+      // Подготавливаем следующую тренировку
+      state.activeWorkout = createEmptyWorkout(state.nextDay);
+      stopRestTimer();
+      saveState();
+      closeModal();
+      renderWorkout();
+      showToast(`Отличная работа! Сохранено (${stats.tonnage} кг)`);
+    }
+
+    function openResetModal() {
+      openModal(
+        'Очистить текущую тренировку?',
+        '<p>Все галочки и секундомер текущей сессии будут сброшены. История прошлых тренировок не пострадает.</p>',
+        [
+          { text: 'Отмена', style: 'secondary', onClick: closeModal },
+          {
+            text: 'Очистить',
+            style: 'danger',
+            onClick: () => {
+              state.activeWorkout = createEmptyWorkout(state.activeWorkout.day);
+              stopRestTimer();
+              saveState();
+              closeModal();
+              renderWorkout();
+              showToast('Текущая тренировка очищена');
+            }
+          }
+        ]
+      );
+    }
+
+    /* =========================================================================
+       8. ВКЛАДКА «ПРОГРЕСС» И SVG-ГРАФИК
+       ========================================================================= */
+    function initProgressSelect() {
+      const sel = document.getElementById('progress-exercise-select');
+      sel.innerHTML = ALL_EXERCISES.map(ex =>
+        `<option value="${ex.id}" ${ex.id === state.selectedProgressEx ? 'selected' : ''}>${ex.name}</option>`
+      ).join('');
+    }
+
+    function setChartMetric(metric) {
+      state.chartMetric = metric;
+      renderProgress();
+    }
+
+    function renderProgress() {
+      const sel = document.getElementById('progress-exercise-select');
+      if (sel.value) state.selectedProgressEx = sel.value;
+      const exId = state.selectedProgressEx;
+
+      // Кнопки метрики
+      const wBtn = document.getElementById('metric-weight-btn');
+      const vBtn = document.getElementById('metric-volume-btn');
+      if (state.chartMetric === 'weight') {
+        wBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition bg-limeAccent text-amoled';
+        vBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400';
+      } else {
+        vBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition bg-skyAccent text-amoled';
+        wBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400';
+      }
+
+      // Собираем хронологические точки (от старых к новым)
+      const points = [];
+      let maxWeight = 0;
+      let bestSet = null; // { weight, reps }
+      let maxVol = 0;
+
+      [...state.history].reverse().forEach(w => {
+        const exLog = (w.exercises || []).find(e => e.id === exId);
+        if (!exLog) return;
+        const doneSets = exLog.sets.filter(s => s.done && s.weight > 0);
+        if (doneSets.length === 0) return;
+
+        let sessionMaxW = 0;
+        let sessionVol = 0;
+        doneSets.forEach(s => {
+          if (s.weight > sessionMaxW) sessionMaxW = s.weight;
+          sessionVol += s.weight * s.reps;
+          if (s.weight > maxWeight) maxWeight = s.weight;
+          if (!bestSet || s.weight > bestSet.weight || (s.weight === bestSet.weight && s.reps > bestSet.reps)) {
+            bestSet = { weight: s.weight, reps: s.reps };
+          }
+        });
+        if (sessionVol > maxVol) maxVol = Math.round(sessionVol);
+
+        points.push({
+          date: w.date,
+          day: w.day,
+          maxW: sessionMaxW,
+          vol: Math.round(sessionVol),
+          sets: doneSets
+        });
+      });
+
+      // Обновляем карточки рекордов
+      document.getElementById('pr-max-weight').textContent = maxWeight > 0 ? `${maxWeight} кг` : '—';
+      document.getElementById('pr-best-set').textContent = bestSet ? `${bestSet.weight} кг × ${bestSet.reps}` : '—';
+      document.getElementById('pr-max-vol').textContent = maxVol > 0 ? `${maxVol} кг` : '—';
+
+      // Рисуем SVG-график
+      const chartBox = document.getElementById('progress-chart-container');
+      if (points.length === 0) {
+        chartBox.innerHTML = `<div class="text-center py-8 text-xs text-slate-400">Пока нет сохранённых данных по этому упражнению.<br/>Заверши первую тренировку, и здесь появится график!</div>`;
+      } else {
+        chartBox.innerHTML = buildSVGChart(points, state.chartMetric);
+      }
+
+      // Журнал последних записей
+      const logsBox = document.getElementById('progress-ex-logs');
+      if (points.length === 0) {
+        logsBox.innerHTML = `<div class="text-slate-500">Записей пока нет.</div>`;
+      } else {
+        logsBox.innerHTML = [...points].reverse().slice(0, 10).map(p => `
+          <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-amoled border border-slate-800/80">
+            <div>
+              <div class="font-bold text-slate-200">${formatDateRu(p.date)} <span class="text-slate-500">• День ${p.day}</span></div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${p.sets.map(s => `${s.weight}×${s.reps}`).join('  |  ')}</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="font-extrabold text-limeAccent">${p.maxW} кг</div>
+              <div class="text-[10px] text-slate-500">${p.vol} кг объём</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function buildSVGChart(points, metric) {
+      const W = 340, H = 200;
+      const padL = 38, padR = 16, padT = 22, padB = 30;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+
+      const values = points.map(p => metric === 'weight' ? p.maxW : p.vol);
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+      const range = maxV - minV || (maxV * 0.2 || 10);
+      const yMin = Math.max(0, minV - range * 0.15);
+      const yMax = maxV + range * 0.15;
+
+      const strokeColor = metric === 'weight' ? '#A3E635' : '#38BDF8';
+      const gradId = `grad_${metric}`;
+
+      const coords = points.map((p, i) => {
+        const x = points.length === 1 ? padL + plotW / 2 : padL + (i / (points.length - 1)) * plotW;
+        const val = metric === 'weight' ? p.maxW : p.vol;
+        const y = padT + plotH - ((val - yMin) / (yMax - yMin || 1)) * plotH;
+        return { x, y, val, label: formatShortDate(p.date) };
+      });
+
+      const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+      const areaPath = coords.length > 1
+        ? `${linePath} L${coords[coords.length - 1].x.toFixed(1)},${(padT + plotH).toFixed(1)} L${coords[0].x.toFixed(1)},${(padT + plotH).toFixed(1)} Z`
+        : '';
+
+      // 3 горизонтальные линии сетки
+      const gridLines = [0, 0.5, 1].map(t => {
+        const y = padT + plotH * (1 - t);
+        const val = Math.round(yMin + (yMax - yMin) * t);
+        return `
+          <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#1E293B" stroke-dasharray="3,3" stroke-width="1"/>
+          <text x="${padL - 6}" y="${(y + 3).toFixed(1)}" fill="#64748B" font-size="9" text-anchor="end">${val}</text>
+        `;
+      }).join('');
+
+      // Подписи дат (максимум 5, чтобы не слипались)
+      const step = Math.max(1, Math.ceil(coords.length / 5));
+      const xLabels = coords.map((c, i) => {
+        if (i !== 0 && i !== coords.length - 1 && i % step !== 0) return '';
+        return `<text x="${c.x.toFixed(1)}" y="${H - 8}" fill="#64748B" font-size="9" text-anchor="middle">${c.label}</text>`;
+      }).join('');
+
+      const dots = coords.map(c => `
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4.5" fill="#0B0E14" stroke="${strokeColor}" stroke-width="2.5"/>
+        <text x="${c.x.toFixed(1)}" y="${(c.y - 9).toFixed(1)}" fill="#F8FAFC" font-size="9.5" font-weight="700" text-anchor="middle">${c.val}</text>
+      `).join('');
+
+      return `
+        <svg viewBox="0 0 ${W} ${H}" class="w-full h-auto overflow-visible">
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          ${gridLines}
+          ${areaPath ? `<path d="${areaPath}" fill="url(#${gradId})"/>` : ''}
+          ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="${strokeColor}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+          ${dots}
+          ${xLabels}
+        </svg>
+      `;
+    }
+
+    /* =========================================================================
+       9. ВКЛАДКА «ИСТОРИЯ» + ЭКСПОРТ / ИМПОРТ JSON
+       ========================================================================= */
+    function renderHistory() {
+      const box = document.getElementById('history-list');
+      if (state.history.length === 0) {
+        box.innerHTML = `
+          <div class="bg-card border border-slate-800/80 rounded-2xl p-8 text-center">
+            <div class="text-3xl mb-2">🏋️‍♂️</div>
+            <div class="text-sm font-bold text-white mb-1">История пока пуста</div>
+            <p class="text-xs text-slate-400">Заверши первую тренировку во вкладке «Тренировка», и она автоматически появится здесь.</p>
+          </div>
+        `;
+        return;
+      }
+
+      box.innerHTML = state.history.map(w => {
+        const isOpen = !!openHistoryCards[w.id];
+        return `
+          <div class="bg-card border border-slate-800/90 rounded-2xl overflow-hidden">
+            <button onclick="toggleHistoryCard('${w.id}')" class="w-full p-4 text-left flex items-center justify-between gap-2 active:bg-cardHover transition">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[11px] font-extrabold ${w.day === 'A' ? 'bg-limeAccent/15 text-limeAccent' : 'bg-skyAccent/15 text-skyAccent'}">
+                    День ${w.day}
+                  </span>
+                  <span class="text-sm font-bold text-white">${formatDateRu(w.date)}</span>
+                </div>
+                <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                  <span>Подходы: <b class="text-slate-200">${w.completedSets}/${w.totalSets || 19}</b></span>
+                  <span>•</span>
+                  <span>Тоннаж: <b class="text-limeAccent">${w.totalTonnage} кг</b></span>
+                  <span>•</span>
+                  <span>${formatTimeMMSS(w.durationSec || 0)}</span>
+                </div>
+              </div>
+              <svg class="w-5 h-5 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            ${isOpen ? `
+              <div class="px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-2.5">
+                ${(w.exercises || []).map(ex => {
+                  const doneSets = ex.sets.filter(s => s.done);
+                  return `
+                    <div class="text-xs">
+                      <div class="font-semibold text-slate-200">${ex.name}</div>
+                      <div class="text-slate-400 mt-0.5">
+                        ${doneSets.length > 0 ? doneSets.map((s, i) => `<span class="inline-block mr-2 px-1.5 py-0.5 rounded bg-amoled border border-slate-800 text-[11px]">${i + 1}: <b>${s.weight}</b>×${s.reps}</span>`).join('') : '<span class="text-slate-600">Пропущено</span>'}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+
+                <div class="pt-2 flex justify-end">
+                  <button onclick="confirmDeleteHistory('${w.id}')" class="px-3 py-1.5 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-bold active:scale-95 transition">
+                    Удалить запись
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleHistoryCard(id) {
+      openHistoryCards[id] = !openHistoryCards[id];
+      renderHistory();
+    }
+
+    function confirmDeleteHistory(id) {
+      openModal(
+        'Удалить тренировку из истории?',
+        '<p>Эта запись исчезнет из истории и графиков прогресса.</p>',
+        [
+          { text: 'Отмена', style: 'secondary', onClick: closeModal },
+          {
+            text: 'Удалить',
+            style: 'danger',
+            onClick: () => {
+              state.history = state.history.filter(w => w.id !== id);
+              saveState();
+              closeModal();
+              renderHistory();
+              showToast('Запись удалена');
+            }
+          }
+        ]
+      );
+    }
+
+    function exportBackup() {
+      try {
+        const data = JSON.stringify({
+          exportedAt: new Date().toISOString(),
+          nextDay: state.nextDay,
+          history: state.history
+        }, null, 2);
+
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateTag = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `fullbody_backup_${dateTag}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Резервная копия скачана (.json)');
+      } catch (e) {
+        showToast('Ошибка экспорта данных');
+      }
+    }
+
+    function importBackup(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!Array.isArray(parsed.history)) throw new Error('Неверный формат');
+          state.history = parsed.history;
+          if (parsed.nextDay === 'A' || parsed.nextDay === 'B') state.nextDay = parsed.nextDay;
+          saveState();
+          renderHistory();
+          renderProgress();
+          renderWorkout();
+          showToast(`Импортировано тренировок: ${state.history.length}`);
+        } catch (err) {
+          showToast('Ошибка: выберите корректный JSON-файл бэкапа');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    /* =========================================================================
+       10. НАВИГАЦИЯ ПО ВКЛАДКАМ И МОДАЛЬНЫЕ ОКНА
+       ========================================================================= */
+    function switchTab(tab) {
+      state.currentTab = tab;
+      ['workout', 'progress', 'history'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+        const navBtn = document.getElementById(`nav-${t}`);
+        if (t === tab) {
+          navBtn.className = 'flex flex-col items-center justify-center gap-1 transition text-limeAccent';
+        } else {
+          navBtn.className = 'flex flex-col items-center justify-center gap-1 transition text-slate-500';
+        }
+      });
+
+      document.getElementById('workout-header-controls').classList.toggle('hidden', tab !== 'workout');
+
+      if (tab === 'progress') renderProgress();
+      if (tab === 'history') renderHistory();
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    function openModal(title, bodyHtml, buttons) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-body').innerHTML = bodyHtml;
+      const actionsEl = document.getElementById('modal-actions');
+      actionsEl.innerHTML = '';
+      buttons.forEach(b => {
+        const btn = document.createElement('button');
+        btn.textContent = b.text;
+        if (b.style === 'primary') {
+          btn.className = 'py-3 px-4 rounded-xl bg-limeAccent text-amoled font-extrabold text-sm active:scale-95 transition';
+        } else if (b.style === 'danger') {
+          btn.className = 'py-3 px-4 rounded-xl bg-rose-500 text-white font-extrabold text-sm active:scale-95 transition';
+        } else {
+          btn.className = 'py-3 px-4 rounded-xl bg-slate-800 text-slate-200 font-bold text-sm active:scale-95 transition';
+        }
+        btn.onclick = b.onClick;
+        actionsEl.appendChild(btn);
+      });
+      document.getElementById('modal-overlay').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.add('hidden');
+    }
+
+    /* =========================================================================
+       11. ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+       ========================================================================= */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      initProgressSelect();
+      switchTab('workout');
+      renderWorkout();
+
+      // Обновляем секундомер тренировки каждую секунду
+      clockInterval = setInterval(updateWorkoutClockUI, 1000);
+
+      // При возврате из блокировки экрана сразу синхронизируем таймеры
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          updateWorkoutClockUI();
+          if (restTimer.active && !restTimer.paused) tickRestTimer();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
